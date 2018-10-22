@@ -19,9 +19,13 @@ Given(/^I (uncheck|check) the following ratings: ([\w, -]*)$/) do |funct,string|
 end
 
 Then(/^I should see all of the movies$/) do
-  result = true
   Movie.all.each do |movie|
-    result &= have_content "asdf"
+    expect(page).to have_content movie[:title]
   end
-  result
+end
+
+Then(/^I should see "([^"]*)" before "([^"]*)"$/) do |arg1, arg2|
+  if page.body.index(arg1) >= page.body.index(arg2)
+    assert false
+  end
 end

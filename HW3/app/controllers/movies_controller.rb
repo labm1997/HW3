@@ -1,74 +1,69 @@
+# This file is app/controllers/movies_controller.rb
 class MoviesController < ApplicationController
-
-  def show
-    id = params[:id] # retrieve movie ID from URI route
-    @movie = Movie.find(id) # look up movie by unique ID
-    # will render app/views/movies/show.<extension> by default
+  def index
+    @all_ratings = Movie.all_ratings
+  	
+  	orderHash = {"title_header" => "title ASC", "release_date_header" => "release_date ASC"}
+  	
+  	@order = orderHash[params[:id]] || session[:sort] || nil
+  	
+    if(@order.nil?) then 
+      @order = ""
+      flash[:notice] = "Invalid order, redirected" 
+      flash.keep
+      redirect_to "/movies"
+    end
+  
+  	ratings = params[:ratings].class == ActionController::Parameters ? params[:ratings].keys : nil
+  	
+  	# Ratings can never be nil, since @all_ratings is not nil
+  	@selectedRatings = ratings || session[:ratings] || @all_ratings
+  	
+    @movies = Movie.where(:rating => @selectedRatings).order(@order)
+  	
+  	session[:ratings] = @selectedRatings
+  	session[:sort] = @order
   end
 
-  # def all_ratings
-  #   %w(G PG PG-13 NC-17 R)
-  # end
-  
-  def index
-    #@movies = Movie.all #first version
-    sort = params[:sort] || session[:sort]
-    case sort
-    when 'title'
-      ordering,@title_header = {:title => :asc}, 'hilite'
-    when 'release_date'
-      ordering,@date_header = {:release_date => :asc}, 'hilite'
-    end
-     @all_ratings = Movie.all_ratings
-     @selected_ratings = params[:ratings]|| session[:ratings] || {}
-    
-     if @selected_ratings == {}
-       @selected_ratings = Hash[@all_ratings.map {|rating| [rating, rating]}]
-     end
-
-     if params[:sort] != session[:sort] or params[:ratings] != session[:ratings]
-       session[:sort] = sort
-       session[:ratings] = @selected_ratings
-       redirect_to :sort => sort, :ratings => @selected_ratings and return
-     end
-    @movies = Movie.order(ordering)
-    #@movies = Movie.where(rating: @selected_ratings.keys).order(ordering)
-  
+  def show
+    id = params[:id]
+    @movie = Movie.find(id)
   end
 
   def new
-    # default: render 'new' template
+    @movie = Movie.new
   end
 
   def create
-    #params.permit!
-    #@movie = Movie.create!(params[:movie])
-    Movie.create(movie_params)
-    flash[:notice] = "#{@movie.title} was successfully created."
+    #@movie = Movie.create!(params[:movie]) #did not work on rails 5.
+    @movie = Movie.create(movie_params)
+    flash[:notice] = "#{@movie.title} was successfully created!"
     redirect_to movies_path
   end
 
   def movie_params
-    params.require(:movie).permit(:title, :rating, :description, :release_date)
+    params.require(:movie).permit(:title,:rating,:description,:release_date)
   end
 
   def edit
-    @movie = Movie.find params[:id]
+    id = params[:id]
+    @movie = Movie.find(id)
+    #@movie = Movie.find params[:id]
   end
 
   def update
-    params.permit!
     @movie = Movie.find params[:id]
-    @movie.update_attributes!(params[:movie])
-    flash[:notice] = "#{@movie.title} was successfully updated."
+    #@movie.update_attributes!(params[:movie])#did not work on rails 5.
+    @movie.update(movie_params)
+    flash[:notice] = "#{@movie.title} was successfully updated!"
     redirect_to movie_path(@movie)
   end
 
   def destroy
-    @movie = Movie.find(params[:id])
+    @movie = Movie.find params[:id]
     @movie.destroy
-    flash[:notice] = "Movie '#{@movie.title}' deleted."
+    flash[:notice] = "#{@movie.title} was deleted!"
     redirect_to movies_path
   end
-
+  
 end
